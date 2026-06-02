@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Empreendimentos Marcelo Conti - Performance Dashboard</title>
+    <!-- Chart.js para os Gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome para Ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-principal: #0b0f19;
+            --bg-card: #151c2c;
+            --cor-texto: #f3f4f6;
+            --cor-mutado: #9ca3af;
+            --azul-premium: #2563eb;
+            --azul-brilhante: #3b82f6;
+            --verde-sucesso: #10b981;
+            --laranja-alerta: #f59e0b;
+            --vermelho-erro: #ef4444;
+            --roxo-premium: #a855f7;
+            --ciano-leads: #06b6d4;
+            --borda-card: rgba(255, 255, 255, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-principal);
+            color: var(--cor-texto);
+            padding: 1.5rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--borda-card);
+            padding-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+
+        .titulo-dashboard h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -0.05em;
+            background: linear-gradient(90deg, #fff, #9ca3af);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .titulo-dashboard p {
+            color: var(--cor-mutado);
+            font-size: 0.9rem;
+            margin-top: 0.2rem;
+        }
+
+        .controles-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .seletor-filtro {
+            background-color: var(--bg-card);
+            color: var(--cor-texto);
+            border: 1px solid var(--borda-card);
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 500;
+            outline: none;
+            cursor: pointer;
+            transition: border 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .seletor-filtro:focus { border-color: var(--azul-brilhante); }
+
+        .status-atualizacao {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(16, 185, 129, 0.1);
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            border: 1px solid rgba(10, 185, 129, 0.2);
+            font-size: 0.85rem;
+            color: var(--verde-sucesso);
+        }
+
+        .ponto-piscante {
+            width: 8px;
+            height: 8px;
+            background-color: var(--verde-sucesso);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* Grid de Cards de KPIs Expandido */
+        .grid-kpis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card-kpi {
+            background-color: var(--bg-card);
+            border: 1px solid var(--borda-card);
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s;
+        }
+
+        .card-kpi:hover { transform: translateY(-2px); }
+        .card-kpi .header-kpi { display: flex; justify-content: space-between; align-items: center; color: var(--cor-mutado); font-size: 0.85rem; font-weight: 500; }
+        .card-kpi .header-kpi i { font-size: 1.2rem; }
+        .card-kpi .valor-kpi { font-size: 1.8rem; font-weight: 700; margin: 1rem 0 0.5rem 0; letter-spacing: -0.03em; }
+        .card-kpi .subtexto-kpi { font-size: 0.8rem; color: var(--cor-mutado); }
+
+        /* Grid de Gráficos Superiores */
+        .grid-graficos {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Estrutura Linear Vertical Seção Mensal */
+        .bloco-mensal-vertical {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 1100px) {
+            .grid-graficos { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 1rem; }
+            header { flex-direction: column; align-items: flex-start; }
+            .controles-header { width: 100%; justify-content: space-between; }
+            .seletor-filtro { width: 100%; text-align: center; }
+        }
+
+        .card-grafico {
+            background-color: var(--bg-card);
+            border: 1px solid var(--borda-card);
+            border-radius: 16px;
+            padding: 1.5rem;
+            min-height: 380px;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .card-tabela-mensal { min-height: auto; }
+        .card-grafico h3 { font-size: 1rem; font-weight: 600; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; }
+        .container-canvas { position: relative; height: 320px; width: 100%; flex-grow: 1; }
+
+        /* Tabela Mobile Safe */
+        .wrapper-tabela { overflow-x: auto; margin-top: 0.5rem; width: 100%; -webkit-overflow-scrolling: touch; }
+        .tabela-mensal { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; min-width: 800px; }
+        .tabela-mensal th { background-color: rgba(255, 255, 255, 0.02); color: var(--cor-mutado); padding: 1rem; font-weight: 600; border-bottom: 1px solid var(--borda-card); white-space: nowrap; }
+        .tabela-mensal td { padding: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.02); font-weight: 500; white-space: nowrap; }
+        .tabela-mensal tr:hover td { background-color: rgba(255, 255, 255, 0.01); }
+
+        .badge-mes {
+            text-transform: capitalize;
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--azul-brilhante);
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="titulo-dashboard">
+                <h1>Portal de Empreendimentos Marcelo Conti</h1>
+                <p>Dashboard de Performance Comercial & Conversão de Leads</p>
+            </div>
+            <div class="controles-header">
+                <select id="filtroMes" class="seletor-filtro" onchange="aplicarFiltroMes()">
+                    <option value="todos">📅 Todos os Meses</option>
+                </select>
+                <div class="status-atualizacao">
+                    <div class="ponto-piscante"></div>
+                    <span>Conectado ao Google Sheets ao vivo</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Seção de KPIs Principais (Agora com 6 Cards Inteligentes) -->
+        <div class="grid-kpis">
+            <!-- NOVO: Leads Entradas -->
+            <div class="card-kpi">
+                <div class="header-kpi"><span>TOTAL LEADS</span><i class="fa-solid fa-users" style="color: var(--ciano-leads);"></i></div>
+                <div class="valor-kpi" id="kpi-leads" style="color: var(--ciano-leads);">0</div>
+                <div class="subtexto-kpi">Novos leads inseridos no funil</div>
+            </div>
+            <div class="card-kpi">
+                <div class="header-kpi"><span>VGV TOTAL COMERCIAL</span><i class="fa-solid fa-chart-line" style="color: var(--verde-sucesso);"></i></div>
+                <div class="valor-kpi" id="kpi-vgv">R$ 0,00</div>
+                <div class="subtexto-kpi">Volume Geral de Vendas acumulado</div>
+            </div>
+            <div class="card-kpi">
+                <div class="header-kpi"><span>VENDAS CONCLUÍDAS</span><i class="fa-solid fa-handshake" style="color: var(--azul-brilhante);"></i></div>
+                <div class="valor-kpi" id="kpi-vendas">0</div>
+                <div class="subtexto-kpi">Contratos fechados no período</div>
+            </div>
+            <div class="card-kpi">
+                <div class="header-kpi"><span>TOTAL ATENDIMENTOS</span><i class="fa-solid fa-clipboard-list" style="color: var(--laranja-alerta);"></i></div>
+                <div class="valor-kpi" id="kpi-atividades">0</div>
+                <div class="subtexto-kpi">Ações e atendimentos registrados</div>
+            </div>
+            <div class="card-kpi">
+                <div class="header-kpi"><span>LIGAÇÕES REALIZADAS</span><i class="fa-solid fa-phone"></i></div>
+                <div class="valor-kpi" id="kpi-ligacoes">0</div>
+                <div class="subtexto-kpi">Contratos telefônicos efetuados</div>
+            </div>
+            <div class="card-kpi">
+                <div class="header-kpi"><span>TAXA DE CONVERSÃO</span><i class="fa-solid fa-percentage" style="color: var(--roxo-premium);"></i></div>
+                <div class="valor-kpi" id="kpi-conversao">0%</div>
+                <div class="subtexto-kpi">Propostas vs Vendas Concluídas</div>
+            </div>
+        </div>
+
+        <!-- Seção de Gráficos Superiores -->
+        <div class="grid-graficos">
+            <div class="card-grafico">
+                <h3><i class="fa-solid fa-chart-area" style="color: var(--azul-brilhante);"></i> Histórico Diário do Período</h3>
+                <div class="container-canvas"><canvas id="graficoLinhaTempo"></canvas></div>
+            </div>
+            <div class="card-grafico">
+                <h3><i class="fa-solid fa-filter" style="color: var(--laranja-alerta);"></i> Funil Comercial Acumulado</h3>
+                <div class="container-canvas"><canvas id="graficoFunil"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Seção Linear Vertical Mês a Mês -->
+        <div class="bloco-mensal-vertical">
+            
+            <!-- Tabela Ocupando Largura Total com Nova Coluna de Leads -->
+            <div class="card-grafico card-tabela-mensal">
+                <h3><i class="fa-solid fa-table-list" style="color: var(--verde-sucesso);"></i> Demonstrativo Numérico Mês a Mês</h3>
+                <div class="wrapper-tabela">
+                    <table class="tabela-mensal">
+                        <thead>
+                            <tr>
+                                <th>Mês</th>
+                                <th>Leads Rec.</th>
+                                <th>Atendimentos</th>
+                                <th>Ligações</th>
+                                <th>Visitas</th>
+                                <th>Propostas</th>
+                                <th>Vendas Concluídas</th>
+                                <th>Conversão %</th>
+                                <th>VGV Comercial</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpoTabelaMensal">
+                            <!-- Inserido dinamicamente via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Gráfico de Linha Mensal Expandido -->
+            <div class="card-grafico">
+                <h3><i class="fa-solid fa-chart-line" style="color: var(--roxo-premium);"></i> Linha de Tendência e Evolução Comercial Mensal</h3>
+                <div class="container-canvas"><canvas id="graficoEvolucaoMensal"></canvas></div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const urlPlanilha = 'COLOQUE_AQUI_O_SEU_LINK_DO_GOOGLE_SHEETS_CSV';
+
+        let todosOsDados = [];
+        let resumoMensalGlobal = {};
+        let chartLinhaTempo, chartFunil, chartEvolucaoMensal;
+
+        function formatarMoeda(valor) { return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+        function limparMoeda(texto) {
+            if (!texto) return 0;
+            let limpo = texto.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
+            return parseFloat(limpo) || 0;
+        }
+
+        async function buscarDadosPlanilha() {
+            try {
+                const response = await fetch(urlPlanilha);
+                const dadosRaw = await response.text();
+                const linhas = dadosRaw.split(/\r?\n/);
+                
+                if(linhas.length < 2) return;
+
+                // Mapeamento Dinâmico de Cabeçalhos para evitar erros de posições de colunas
+                let cabecalhos = linhas[0].split(',').map(c => c.trim().replace(/"/g, ''));
+                let idxDia = cabecalhos.indexOf('Dia');
+                let idxMes = cabecalhos.indexOf('Mês');
+                let idxLeads = cabecalhos.indexOf('Leads'); // Encontra a nova coluna de Leads
+                let idxAtividades = cabecalhos.indexOf('Atividades');
+                let idxLigacoes = cabecalhos.indexOf('Ligações');
+                let idxVisitas = cabecalhos.indexOf('Visitas');
+                let idxPropostas = cabecalhos.indexOf('Propostas');
+                let idxVendas = cabecalhos.indexOf('Vendas');
+                let idxVgv = cabecalhos.indexOf('VGV');
+
+                todosOsDados = [];
+                resumoMensalGlobal = {};
+                let mesesIdentificados = new Set();
+
+                for (let i = 1; i < linhas.length; i++) {
+                    if (!linhas[i]) continue;
+                    let colunas = linhas[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    if (colunas.length < cabecalhos.length) continue;
+
+                    let rowData = {
+                        dia: colunas[idxDia] ? colunas[idxDia].trim() : '',
+                        mes: colunas[idxMes] ? colunas[idxMes].trim().toLowerCase() : '', 
+                        leads: idxLeads !== -1 ? (parseInt(colunas[idxLeads]) || 0) : 0,
+                        atividades: idxAtividades !== -1 ? (parseInt(colunas[idxAtividades]) || 0) : 0,
+                        ligacoes: idxLigacoes !== -1 ? (parseInt(colunas[idxLigacoes]) || 0) : 0,
+                        visitas: idxVisitas !== -1 ? (parseInt(colunas[idxVisitas]) || 0) : 0,
+                        propostas: idxPropostas !== -1 ? (parseInt(colunas[idxPropostas]) || 0) : 0,
+                        vendas: idxVendas !== -1 ? (parseInt(colunas[idxVendas]) || 0) : 0,
+                        vgv: idxVgv !== -1 ? limparMoeda(colunas[idxVgv]) : 0
+                    };
+
+                    todosOsDados.push(rowData);
+                    if(rowData.mes) mesesIdentificados.add(rowData.mes);
+
+                    if (!resumoMensalGlobal[rowData.mes]) {
+                        resumoMensalGlobal[rowData.mes] = { leads: 0, atividades: 0, ligacoes: 0, visitas: 0, propostas: 0, vendas: 0, vgv: 0 };
+                    }
+                    resumoMensalGlobal[rowData.mes].leads += rowData.leads;
+                    resumoMensalGlobal[rowData.mes].atividades += rowData.atividades;
+                    resumoMensalGlobal[rowData.mes].ligacoes += rowData.ligacoes;
+                    resumoMensalGlobal[rowData.mes].visitas += rowData.visitas;
+                    resumoMensalGlobal[rowData.mes].propostas += rowData.propostas;
+                    resumoMensalGlobal[rowData.mes].vendas += rowData.vendas;
+                    resumoMensalGlobal[rowData.mes].vgv += rowData.vgv;
+                }
+
+                const seletor = document.getElementById('filtroMes');
+                seletor.innerHTML = '<option value="todos">📅 Todos os Meses</option>';
+                mesesIdentificados.forEach(m => {
+                    if(m) seletor.innerHTML += `<option value="${m}">${m.charAt(0).toUpperCase() + m.slice(1)}</option>`;
+                });
+
+                construirEstruturaMensal();
+                processarFiltroEPlotar('todos');
+
+            } catch (erro) {
+                console.error("Erro ao processar dados da planilha: ", erro);
+            }
+        }
+
+        function construirEstruturaMensal() {
+            const corpoTabela = document.getElementById('corpoTabelaMensal');
+            corpoTabela.innerHTML = '';
+
+            let mesesLabels = [];
+            let dLeads = [], dAtiv = [], dLig = [], dVis = [], dProp = [], dVend = [];
+
+            for (let mes in resumoMensalGlobal) {
+                if(!mes) continue;
+                let mObj = resumoMensalGlobal[mes];
+                let tx = mObj.propostas > 0 ? ((mObj.vendas / mObj.propostas) * 100).toFixed(1) : 0;
+
+                corpoTabela.innerHTML += `
+                    <tr>
+                        <td><span class="badge-mes">${mes}</span></td>
+                        <td style="color: var(--ciano-leads); font-weight:600">${mObj.leads}</td>
+                        <td>${mObj.atividades}</td>
+                        <td>${mObj.ligacoes}</td>
+                        <td>${mObj.visitas}</td>
+                        <td>${mObj.propostas}</td>
+                        <td>${mObj.vendas}</td>
+                        <td style="color: var(--roxo-premium); font-weight:600">${tx}%</td>
+                        <td style="color: var(--verde-sucesso); font-weight:600">${formatarMoeda(mObj.vgv)}</td>
+                    </tr>
+                `;
+
+                mesesLabels.push(mes.charAt(0).toUpperCase() + mes.slice(1));
+                dLeads.push(mObj.leads);
+                dAtiv.push(mObj.atividades);
+                dLig.push(mObj.ligacoes);
+                dVis.push(mObj.visitas);
+                dProp.push(mObj.propostas);
+                dVend.push(mObj.vendas);
+            }
+
+            const ctxM = document.getElementById('graficoEvolucaoMensal').getContext('2d');
+            if (chartEvolucaoMensal) chartEvolucaoMensal.destroy();
+
+            chartEvolucaoMensal = new Chart(ctxM, {
+                type: 'line',
+                data: {
+                    labels: mesesLabels,
+                    datasets: [
+                        { label: 'Leads', data: dLeads, borderColor: '#06b6d4', backgroundColor: 'rgba(6, 182, 212, 0.04)', tension: 0.2, fill: true },
+                        { label: 'Atendimentos', data: dAtiv, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.04)', tension: 0.2, fill: true },
+                        { label: 'Ligações', data: dLig, borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.04)', tension: 0.2, fill: true },
+                        { label: 'Visitas', data: dVis, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.04)', tension: 0.2, fill: true },
+                        { label: 'Propostas', data: dProp, borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.04)', tension: 0.2, fill: true },
+                        { label: 'Vendas', data: dVend, borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.04)', tension: 0.2, fill: true }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top', labels: { boxWidth: 12 } } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function processarFiltroEPlotar(mesFiltrado) {
+            let dadosFiltrados = todosOsDados;
+            if (mesFiltrado !== 'todos') {
+                dadosFiltrados = todosOsDados.filter(d => d.mes === mesFiltrado);
+            }
+
+            let totalLeads = 0, totalVgv = 0, totalVendas = 0, totalAtividades = 0, totalLigacoes = 0, totalPropostas = 0, totalVisitas = 0;
+            let labelsDias = [], dLeads = [], dAtiv = [], dLig = [], dVis = [];
+
+            dadosFiltrados.forEach(d => {
+                totalLeads += d.leads;
+                totalAtividades += d.atividades;
+                totalLigacoes += d.ligacoes;
+                totalVisitas += d.visitas;
+                totalPropostas += d.propostas;
+                totalVendas += d.vendas;
+                totalVgv += d.vgv;
+
+                labelsDias.push(d.dia.substring(0, 5));
+                dLeads.push(d.leads);
+                dAtiv.push(d.atividades);
+                dLig.push(d.ligacoes);
+                dVis.push(d.visitas);
+            });
+
+            let taxaConversao = totalPropostas > 0 ? ((totalVendas / totalPropostas) * 100).toFixed(1) : 0;
+
+            document.getElementById('kpi-leads').innerText = totalLeads;
+            document.getElementById('kpi-vgv').innerText = formatarMoeda(totalVgv);
+            document.getElementById('kpi-vendas').innerText = totalVendas;
+            document.getElementById('kpi-atividades').innerText = totalAtividades;
+            document.getElementById('kpi-ligacoes').innerText = totalLigacoes;
+            document.getElementById('kpi-conversao').innerText = taxaConversao + '%';
+
+            plotarGraficosSuperiores(labelsDias, dLeads, dAtiv, dLig, dVis, totalLeads, totalAtividades, totalLigacoes, totalVisitas, totalPropostas, totalVendas);
+        }
+
+        function plotarGraficosSuperiores(labels, leads, atividades, ligacoes, visitas, tLeads, tAtiv, tLig, tVis, tProp, tVend) {
+            Chart.defaults.color = '#9ca3af';
+            Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.05)';
+
+            const ctxLinha = document.getElementById('graficoLinhaTempo').getContext('2d');
+            if (chartLinhaTempo) chartLinhaTempo.destroy();
+            chartLinhaTempo = new Chart(ctxLinha, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Leads', data: leads, borderColor: '#06b6d4', backgroundColor: 'rgba(6, 182, 212, 0.02)', tension: 0.2, fill: true },
+                        { label: 'Atendimentos', data: atividades, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.02)', tension: 0.2, fill: true },
+                        { label: 'Ligações', data: ligacoes, borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.02)', tension: 0.2, fill: true },
+                        { label: 'Visitas', data: visitas, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.02)', tension: 0.2, fill: true }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+
+            const ctxFunil = document.getElementById('graficoFunil').getContext('2d');
+            if (chartFunil) chartFunil.destroy();
+            chartFunil = new Chart(ctxFunil, {
+                type: 'bar',
+                data: {
+                    labels: ['Leads', 'Atend.', 'Ligações', 'Visitas', 'Propostas', 'Vendas'],
+                    datasets: [{
+                        data: [tLeads, tAtiv, tLig, tVis, tProp, tVend],
+                        backgroundColor: ['#06b6d4', '#f59e0b', '#2563eb', '#10b981', '#ef4444', '#a855f7'],
+                        borderRadius: 5
+                    }]
+                },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+
+        function aplicarFiltroMes() {
+            const escolheuMes = document.getElementById('filtroMes').value;
+            processarFiltroEPlotar(escolheuMes);
+        }
+
+        buscarDadosPlanilha();
+        setInterval(buscarDadosPlanilha, 300000);
+    </script>
+</body>
+</html>
